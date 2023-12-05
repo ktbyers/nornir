@@ -12,12 +12,12 @@ from nornir.core.plugins.runners import RunnerPlugin, RunnersPluginRegister
 from nornir.core.state import GlobalState
 
 
-def load_inventory_async(
+async def load_inventory_async(
     config: Config,
 ) -> Inventory:
     InventoryPluginRegister.auto_register()
     inventory_plugin = InventoryPluginRegister.get_plugin(config.inventory.plugin)
-    inv = inventory_plugin(**config.inventory.options).load_async()
+    inv = await inventory_plugin(**config.inventory.options).load_async()
 
     if config.inventory.transform_function:
         TransformFunctionRegister.auto_register()
@@ -27,6 +27,7 @@ def load_inventory_async(
         for h in inv.hosts.values():
             transform_function(h, **(config.inventory.transform_function_options or {}))
 
+    return inv
 
 def load_inventory(
     config: Config,
@@ -92,7 +93,7 @@ def InitNornir(
     )
 
 
-def InitNornirAsync(
+async def InitNornirAsync(
     config_file: str = "",
     dry_run: bool = False,
     **kwargs: Any,
@@ -120,9 +121,10 @@ def InitNornirAsync(
     data = GlobalState(dry_run=dry_run)
 
     config.logging.configure()
+    inventory = await load_inventory_async(config)
 
     return Nornir(
-        inventory=load_inventory_async(config),
+        inventory=inventory,
         runner=load_runner(config),
         config=config,
         data=data,
